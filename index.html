@@ -10,7 +10,7 @@
       --bg: #0a0a0a;
       --red: #ff2d2d;
       --green: #00ff88;
-      --dim: #333;
+      --dim: #222;
       --muted: #555;
     }
 
@@ -23,6 +23,7 @@
       font-family: 'Syne', sans-serif;
       overflow: hidden;
       position: fixed;
+      user-select: none;
     }
 
     body::before {
@@ -31,63 +32,41 @@
       inset: 0;
       background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
       pointer-events: none;
-      z-index: 100;
+      z-index: 999;
     }
 
-    #app {
-      width: 100%; height: 100%;
+    .corner { position: fixed; width: 24px; height: 24px; opacity: 0.3; z-index: 50; }
+    .corner-tl { top: 16px; left: 16px; border-top: 2px solid var(--red); border-left: 2px solid var(--red); }
+    .corner-tr { top: 16px; right: 16px; border-top: 2px solid var(--red); border-right: 2px solid var(--red); }
+    .corner-bl { bottom: 16px; left: 16px; border-bottom: 2px solid var(--red); border-left: 2px solid var(--red); }
+    .corner-br { bottom: 16px; right: 16px; border-bottom: 2px solid var(--red); border-right: 2px solid var(--red); }
+
+    /* ── BEREIT SCREEN ── */
+    #ready-screen {
+      position: fixed;
+      inset: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 32px;
       padding: 40px 24px;
-      transition: background 0.6s ease;
+      transition: opacity 0.4s;
     }
 
-    #app.locked { background: #1a0000; }
-
-    .corner { position: fixed; width: 24px; height: 24px; opacity: 0.4; }
-    .corner-tl { top: 16px; left: 16px; border-top: 2px solid var(--red); border-left: 2px solid var(--red); }
-    .corner-tr { top: 16px; right: 16px; border-top: 2px solid var(--red); border-right: 2px solid var(--red); }
-    .corner-bl { bottom: 16px; left: 16px; border-bottom: 2px solid var(--red); border-left: 2px solid var(--red); }
-    .corner-br { bottom: 16px; right: 16px; border-bottom: 2px solid var(--red); border-right: 2px solid var(--red); }
-
-    .grid-line { position: fixed; background: var(--dim); opacity: 0.15; }
-    .grid-h { width: 100%; height: 1px; left: 0; }
-    .grid-v { height: 100%; width: 1px; top: 0; }
+    #ready-screen.hidden { display: none; }
 
     #lock-icon {
       font-size: 96px;
-      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    #lock-icon.locked { animation: pulse 2s infinite; }
-
-    @keyframes pulse {
-      0%, 100% { filter: drop-shadow(0 0 30px var(--red)); }
-      50% { filter: drop-shadow(0 0 60px var(--red)); }
+      filter: drop-shadow(0 0 20px #333);
+      transition: all 0.5s;
     }
 
     #status-text {
       font-size: 42px;
       font-weight: 800;
       letter-spacing: -1px;
-      transition: color 0.4s;
-    }
-
-    #status-text.locked {
-      color: var(--red);
-      animation: flicker 4s infinite;
-    }
-
-    #status-text.ready { color: var(--green); }
-
-    @keyframes flicker {
-      0%, 95%, 100% { opacity: 1; }
-      96% { opacity: 0.4; }
-      97% { opacity: 1; }
-      98% { opacity: 0.6; }
+      color: var(--green);
     }
 
     #connection {
@@ -105,6 +84,105 @@
     #connection.connected { color: var(--green); border-color: var(--green); box-shadow: 0 0 12px rgba(0,255,136,0.2); }
     #connection.error { color: var(--red); border-color: var(--red); }
 
+    /* ── LOCK SCREEN ── */
+    #lock-screen {
+      position: fixed;
+      inset: 0;
+      background: #0d0000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 40px 24px;
+      z-index: 80;
+    }
+
+    #lock-screen.active { display: flex; }
+
+    .lock-title {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--red);
+      animation: flicker 4s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 94%, 100% { opacity: 1; }
+      95% { opacity: 0.3; }
+      96% { opacity: 1; }
+      97% { opacity: 0.5; }
+      98% { opacity: 1; }
+    }
+
+    .lock-big-icon {
+      font-size: 80px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { filter: drop-shadow(0 0 20px var(--red)); }
+      50% { filter: drop-shadow(0 0 50px var(--red)); }
+    }
+
+    /* PIN Display */
+    .pin-display {
+      display: flex;
+      gap: 14px;
+      margin-top: 8px;
+    }
+
+    .pin-dot {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--red);
+      transition: background 0.15s;
+    }
+
+    .pin-dot.filled { background: var(--red); }
+    .pin-dot.wrong { background: #ff000050; border-color: #ff000080; animation: shake 0.3s; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    /* PIN Pad */
+    .pin-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 240px;
+    }
+
+    .pin-btn {
+      background: #1a0000;
+      border: 1px solid #3a0000;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      padding: 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s;
+      text-align: center;
+    }
+
+    .pin-btn:active { background: #3a0000; border-color: var(--red); }
+
+    .pin-btn.wide {
+      grid-column: span 2;
+    }
+
+    .pin-hint {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: #3a0000;
+      letter-spacing: 2px;
+    }
+
     #topic-label {
       font-family: 'Share Tech Mono', monospace;
       font-size: 11px;
@@ -112,21 +190,7 @@
       letter-spacing: 1px;
       position: fixed;
       bottom: 28px;
-    }
-
-    /* Banner der erscheint wenn Seite nach Sperre wieder geöffnet wird */
-    #reopen-banner {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      background: var(--red);
-      color: #fff;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 13px;
-      letter-spacing: 1px;
-      text-align: center;
-      padding: 14px;
-      z-index: 200;
+      z-index: 10;
     }
   </style>
 </head>
@@ -137,65 +201,119 @@
   <div class="corner corner-bl"></div>
   <div class="corner corner-br"></div>
 
-  <div class="grid-line grid-h" style="top: 33%"></div>
-  <div class="grid-line grid-h" style="top: 66%"></div>
-  <div class="grid-line grid-v" style="left: 20%"></div>
-  <div class="grid-line grid-v" style="left: 80%"></div>
-
-  <div id="reopen-banner">⚠ GERÄT GESPERRT – WARTE AUF FREIGABE</div>
-
-  <div id="app">
+  <!-- BEREIT -->
+  <div id="ready-screen">
     <div id="lock-icon">🔓</div>
-    <div id="status-text" class="ready">BEREIT</div>
+    <div id="status-text">BEREIT</div>
     <div id="connection">VERBINDE...</div>
+  </div>
+
+  <!-- GESPERRT mit PIN -->
+  <div id="lock-screen">
+    <div class="lock-big-icon">🔒</div>
+    <div class="lock-title">GESPERRT</div>
+    <div class="pin-display">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+      <div class="pin-dot" id="d4"></div>
+      <div class="pin-dot" id="d5"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn" onclick="pinPress('del')">⌫</button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn" onclick="pinPress('ok')">OK</button>
+    </div>
+    <div class="pin-hint">PIN EINGEBEN ZUM ENTSPERREN</div>
   </div>
 
   <div id="topic-label">THEMA: leojonathan2026123</div>
 
   <script>
     const TOPIC = "leojonathan2026123";
-    const STORAGE_KEY = "remote_locked";
+    const CORRECT_PIN = "958460";
+    const LOCK_KEY = "remote_locked";
 
-    const app = document.getElementById('app');
-    const lockIcon = document.getElementById('lock-icon');
-    const statusText = document.getElementById('status-text');
-    const connection = document.getElementById('connection');
-    const reopenBanner = document.getElementById('reopen-banner');
-
+    let currentPin = "";
+    let isLocked = false;
     let lastId = localStorage.getItem('last_ntfy_id') || '';
 
-    // Beim Öffnen: war die Seite gesperrt? → sofort wieder sperren
-    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+    const readyScreen = document.getElementById('ready-screen');
+    const lockScreen = document.getElementById('lock-screen');
+    const connection = document.getElementById('connection');
+
+    // Beim Öffnen: war gesperrt? → sofort wieder sperren
+    if (localStorage.getItem(LOCK_KEY) === 'true') {
       setLocked(true);
-      reopenBanner.style.display = 'block';
     }
 
     function setLocked(val) {
+      isLocked = val;
+      localStorage.setItem(LOCK_KEY, val ? 'true' : 'false');
       if (val) {
-        app.classList.add('locked');
-        lockIcon.textContent = '🔒';
-        lockIcon.classList.add('locked');
-        statusText.textContent = 'GESPERRT';
-        statusText.className = 'locked';
-        localStorage.setItem(STORAGE_KEY, 'true');
-        // Vollbild in Chrome
+        readyScreen.classList.add('hidden');
+        lockScreen.classList.add('active');
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen().catch(() => {});
         }
       } else {
-        app.classList.remove('locked');
-        lockIcon.textContent = '🔓';
-        lockIcon.classList.remove('locked');
-        statusText.textContent = 'BEREIT';
-        statusText.className = 'ready';
-        localStorage.setItem(STORAGE_KEY, 'false');
-        reopenBanner.style.display = 'none';
-        if (document.exitFullscreen) {
-          document.exitFullscreen().catch(() => {});
-        }
+        lockScreen.classList.remove('active');
+        readyScreen.classList.remove('hidden');
+        currentPin = "";
+        updateDots();
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
       }
     }
 
+    // PIN Logik
+    function pinPress(key) {
+      if (key === 'del') {
+        currentPin = currentPin.slice(0, -1);
+      } else if (key === 'ok') {
+        checkPin();
+        return;
+      } else {
+        if (currentPin.length >= 6) return;
+        currentPin += key;
+        if (currentPin.length === 6) checkPin();
+      }
+      updateDots();
+    }
+
+    function updateDots() {
+      for (let i = 0; i < 6; i++) {
+        const dot = document.getElementById('d' + i);
+        dot.classList.toggle('filled', i < currentPin.length);
+        dot.classList.remove('wrong');
+      }
+    }
+
+    function checkPin() {
+      if (currentPin === CORRECT_PIN) {
+        setLocked(false);
+      } else {
+        // Falsche PIN – schütteln und zurücksetzen
+        for (let i = 0; i < 6; i++) {
+          document.getElementById('d' + i).classList.add('wrong');
+        }
+        setTimeout(() => {
+          currentPin = "";
+          updateDots();
+        }, 600);
+      }
+    }
+
+    // Remote Befehle
     function handleCommand(cmd) {
       const c = cmd.toLowerCase().trim();
       if (c === 'start') {
@@ -208,7 +326,7 @@
       }
     }
 
-    // Echtzeit via SSE
+    // SSE Verbindung
     function connectSSE() {
       connection.textContent = 'VERBINDE...';
       connection.className = '';
