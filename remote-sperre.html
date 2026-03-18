@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sperre">
+  <title>Remote Sperre</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --red: #ff2d2d;
+      --green: #00ff88;
+      --dim: #333;
+      --text: #ffffff;
+      --muted: #555;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow: hidden;
+      position: fixed;
+    }
+
+    /* Scanlines overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #app {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 40px 24px;
+      transition: background 0.6s ease;
+    }
+
+    #app.locked {
+      background: #1a0000;
+    }
+
+    /* Corner decorations */
+    .corner {
+      position: fixed;
+      width: 24px; height: 24px;
+      opacity: 0.4;
+    }
+    .corner-tl { top: 16px; left: 16px; border-top: 2px solid var(--red); border-left: 2px solid var(--red); }
+    .corner-tr { top: 16px; right: 16px; border-top: 2px solid var(--red); border-right: 2px solid var(--red); }
+    .corner-bl { bottom: 16px; left: 16px; border-bottom: 2px solid var(--red); border-left: 2px solid var(--red); }
+    .corner-br { bottom: 16px; right: 16px; border-bottom: 2px solid var(--red); border-right: 2px solid var(--red); }
+
+    /* Lock icon */
+    #lock-icon {
+      font-size: 96px;
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      filter: drop-shadow(0 0 20px var(--muted));
+    }
+
+    #lock-icon.locked {
+      filter: drop-shadow(0 0 40px var(--red));
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { filter: drop-shadow(0 0 30px var(--red)); }
+      50% { filter: drop-shadow(0 0 60px var(--red)) drop-shadow(0 0 100px rgba(255,45,45,0.3)); }
+    }
+
+    /* Status text */
+    #status-text {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      transition: color 0.4s;
+    }
+
+    #status-text.locked { color: var(--red); }
+    #status-text.ready { color: var(--green); }
+
+    /* Connection badge */
+    #connection {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 16px;
+      border: 1px solid var(--dim);
+      border-radius: 2px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all 0.3s;
+    }
+
+    #connection.connected {
+      color: var(--green);
+      border-color: var(--green);
+      box-shadow: 0 0 12px rgba(0,255,136,0.2);
+    }
+
+    #connection.error {
+      color: var(--red);
+      border-color: var(--red);
+    }
+
+    /* Topic */
+    #topic-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      position: fixed;
+      bottom: 28px;
+    }
+
+    /* Flicker animation for locked state */
+    @keyframes flicker {
+      0%, 95%, 100% { opacity: 1; }
+      96% { opacity: 0.4; }
+      97% { opacity: 1; }
+      98% { opacity: 0.6; }
+      99% { opacity: 1; }
+    }
+
+    #app.locked #status-text {
+      animation: flicker 4s infinite;
+    }
+
+    /* Grid lines decoration */
+    .grid-line {
+      position: fixed;
+      background: var(--dim);
+      opacity: 0.15;
+    }
+    .grid-h { width: 100%; height: 1px; left: 0; }
+    .grid-v { height: 100%; width: 1px; top: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Corner decorations -->
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <!-- Grid lines -->
+  <div class="grid-line grid-h" style="top: 33%"></div>
+  <div class="grid-line grid-h" style="top: 66%"></div>
+  <div class="grid-line grid-v" style="left: 20%"></div>
+  <div class="grid-line grid-v" style="left: 80%"></div>
+
+  <div id="app">
+    <div id="lock-icon">🔓</div>
+    <div id="status-text" class="ready">BEREIT</div>
+    <div id="connection">VERBINDE...</div>
+  </div>
+
+  <div id="topic-label">THEMA: leojonathan2026123</div>
+
+  <script>
+    const TOPIC = "leojonathan2026123";
+
+    const app = document.getElementById('app');
+    const lockIcon = document.getElementById('lock-icon');
+    const statusText = document.getElementById('status-text');
+    const connection = document.getElementById('connection');
+
+    let isLocked = false;
+    let lastId = '';
+
+    function setLocked(val) {
+      isLocked = val;
+      if (val) {
+        app.classList.add('locked');
+        lockIcon.textContent = '🔒';
+        lockIcon.classList.add('locked');
+        statusText.textContent = 'GESPERRT';
+        statusText.className = 'locked';
+        // Vollbild anfordern
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        app.classList.remove('locked');
+        lockIcon.textContent = '🔓';
+        lockIcon.classList.remove('locked');
+        statusText.textContent = 'BEREIT';
+        statusText.className = 'ready';
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    }
+
+    function handleCommand(cmd) {
+      const c = cmd.toLowerCase().trim();
+      if (c === 'start') {
+        setLocked(true);
+      } else if (c === 'stop' || c === 'stopp') {
+        setLocked(false);
+      } else if (c === 'exit') {
+        setLocked(false);
+        window.close();
+      }
+    }
+
+    // Echtzeit via SSE (Server-Sent Events)
+    function connectSSE() {
+      connection.textContent = 'VERBINDE...';
+      connection.className = '';
+
+      const es = new EventSource(`https://ntfy.sh/${TOPIC}/sse`);
+
+      es.onopen = () => {
+        connection.textContent = 'VERBUNDEN ✓';
+        connection.className = 'connected';
+      };
+
+      es.addEventListener('message', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.id === lastId) return;
+          lastId = data.id;
+
+          let msg = data.message || '';
+          // Falls message selbst JSON ist: {"message":"start"}
+          try {
+            const inner = JSON.parse(msg);
+            if (inner.message) msg = inner.message;
+          } catch {}
+
+          handleCommand(msg);
+        } catch {}
+      });
+
+      es.onerror = () => {
+        connection.textContent = 'VERBINDUNG UNTERBROCHEN';
+        connection.className = 'error';
+        es.close();
+        // Nach 3 Sekunden neu verbinden
+        setTimeout(connectSSE, 3000);
+      };
+    }
+
+    // Verhindern dass man zur vorherigen Seite wechselt
+    window.addEventListener('popstate', (e) => {
+      history.pushState(null, '', window.location.href);
+    });
+    history.pushState(null, '', window.location.href);
+
+    // Verbindung starten
+    connectSSE();
+  </script>
+</body>
+</html>
